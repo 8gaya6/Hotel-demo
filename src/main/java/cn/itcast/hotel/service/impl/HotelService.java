@@ -12,6 +12,7 @@ import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
@@ -27,6 +28,37 @@ public class HotelService extends ServiceImpl<HotelMapper, Hotel> implements IHo
     @Autowired
     private RestHighLevelClient client;
 
+    /**
+     * 构建布尔查询请求
+     * @param params
+     * @param request
+     */
+    private void buildBasicQuery(RequestParams params, SearchRequest request) {
+        // 1. 构建 BooleanQuery
+        BoolQueryBuilder boolQuery = QueryBuilders.boolQuery();
+        // 2. 关键字
+        String key = params.getKey();
+        if (key == null || "".equals(key)) boolQuery.must(QueryBuilders.matchAllQuery());
+        else boolQuery.must(QueryBuilders.matchQuery("all", key));
+
+        // 3. 城市条件
+        if (params.getCity() != null && !params.getCity().equals("")) boolQuery.filter(QueryBuilders.termQuery("city", params.getCity()));
+        // 4. 品牌条件
+        if (params.getBrand() != null && !params.getBrand().equals("")) boolQuery.filter(QueryBuilders.termQuery("brand", params.getBrand()));
+        // 5. 星级条件
+        if (params.getStarName() != null && !params.getStarName().equals("")) boolQuery.filter(QueryBuilders.termQuery("starName", params.getStarName()));
+        // 6. 价格
+        if (params.getMinPrice() != null && params.getMaxPrice() != null)
+            boolQuery.filter(QueryBuilders
+                    .rangeQuery("price")
+                    .gte(params.getMinPrice())
+                    .lte(params.getMaxPrice())
+            );
+
+        // 7. 放入 source
+        request.source().query(boolQuery);
+    }
+
     @Override
     public PageResult search(RequestParams params) {
         try {
@@ -34,9 +66,7 @@ public class HotelService extends ServiceImpl<HotelMapper, Hotel> implements IHo
             SearchRequest request = new SearchRequest("cloudhotel");
             // 2. 准备 DSL
             // 2.1. query
-            String key = params.getKey();
-            if (key == null || "".equals(key)) request.source().query(QueryBuilders.matchAllQuery());
-            else request.source().query(QueryBuilders.matchQuery("all", key));
+            buildBasicQuery(params, request);
 
             // 2.2. 分页
             int page = params.getPage();
