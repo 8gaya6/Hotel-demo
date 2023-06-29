@@ -19,6 +19,8 @@ public class HotelDoc {
     private String pic;
     // 周边酒店的距离值
     private Object distance;
+    // 是否打钱了
+    private Boolean isAD;
     public HotelDoc(Hotel hotel) {
         this.id = hotel.getId();
         this.name = hotel.getName();

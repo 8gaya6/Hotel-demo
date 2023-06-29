@@ -16,6 +16,8 @@ import org.elasticsearch.common.geo.GeoPoint;
 import org.elasticsearch.common.unit.DistanceUnit;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.index.query.functionscore.FunctionScoreQueryBuilder;
+import org.elasticsearch.index.query.functionscore.ScoreFunctionBuilders;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.sort.SortBuilders;
@@ -33,7 +35,7 @@ public class HotelService extends ServiceImpl<HotelMapper, Hotel> implements IHo
     private RestHighLevelClient client;
 
     /**
-     * 构建布尔查询请求
+     * 构建查询请求
      *
      * @param params
      * @param request
@@ -63,8 +65,24 @@ public class HotelService extends ServiceImpl<HotelMapper, Hotel> implements IHo
                     .lte(params.getMaxPrice())
             );
 
-        // 7. 放入 source
-        request.source().query(boolQuery);
+        // 7. 算分控制
+        FunctionScoreQueryBuilder functionScoreQuery =
+                QueryBuilders.functionScoreQuery(
+                        // 原始查询
+                        boolQuery,
+                        // function score 的数组
+                        new FunctionScoreQueryBuilder.FilterFunctionBuilder[] {
+                                // 其中的一个 function score 元素
+                                new FunctionScoreQueryBuilder.FilterFunctionBuilder(
+                                        // 过滤条件
+                                        QueryBuilders.termQuery("isAD", true),
+                                        // 算分函数
+                                        ScoreFunctionBuilders.weightFactorFunction(10)
+                                )
+                        });
+
+        // 8. 放入 source
+        request.source().query(functionScoreQuery);
     }
 
     @Override
