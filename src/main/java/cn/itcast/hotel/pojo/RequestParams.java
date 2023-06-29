@@ -22,4 +22,6 @@ public class RequestParams {
     private String starName;
     private Integer minPrice;
     private Integer maxPrice;
+    // 当前位置
+    private String location;
 }

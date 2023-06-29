@@ -12,10 +12,14 @@ import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.common.geo.GeoPoint;
+import org.elasticsearch.common.unit.DistanceUnit;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
+import org.elasticsearch.search.sort.SortBuilders;
+import org.elasticsearch.search.sort.SortOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -30,6 +34,7 @@ public class HotelService extends ServiceImpl<HotelMapper, Hotel> implements IHo
 
     /**
      * 构建布尔查询请求
+     *
      * @param params
      * @param request
      */
@@ -42,11 +47,14 @@ public class HotelService extends ServiceImpl<HotelMapper, Hotel> implements IHo
         else boolQuery.must(QueryBuilders.matchQuery("all", key));
 
         // 3. 城市条件
-        if (params.getCity() != null && !params.getCity().equals("")) boolQuery.filter(QueryBuilders.termQuery("city", params.getCity()));
+        if (params.getCity() != null && !params.getCity().equals(""))
+            boolQuery.filter(QueryBuilders.termQuery("city", params.getCity()));
         // 4. 品牌条件
-        if (params.getBrand() != null && !params.getBrand().equals("")) boolQuery.filter(QueryBuilders.termQuery("brand", params.getBrand()));
+        if (params.getBrand() != null && !params.getBrand().equals(""))
+            boolQuery.filter(QueryBuilders.termQuery("brand", params.getBrand()));
         // 5. 星级条件
-        if (params.getStarName() != null && !params.getStarName().equals("")) boolQuery.filter(QueryBuilders.termQuery("starName", params.getStarName()));
+        if (params.getStarName() != null && !params.getStarName().equals(""))
+            boolQuery.filter(QueryBuilders.termQuery("starName", params.getStarName()));
         // 6. 价格
         if (params.getMinPrice() != null && params.getMaxPrice() != null)
             boolQuery.filter(QueryBuilders
@@ -72,6 +80,16 @@ public class HotelService extends ServiceImpl<HotelMapper, Hotel> implements IHo
             int page = params.getPage();
             int size = params.getSize();
             request.source().from((page - 1) * size).size(size);
+
+            // 2.3. 排序
+            String location = params.getLocation();
+            if (location != null && !location.equals("")) {
+                request.source().sort(SortBuilders
+                        .geoDistanceSort("location", new GeoPoint(location))
+                        .order(SortOrder.ASC)
+                        .unit(DistanceUnit.KILOMETERS)
+                );
+            }
 
             // 3. 发送请求
             SearchResponse response = client.search(request, RequestOptions.DEFAULT);
@@ -102,6 +120,9 @@ public class HotelService extends ServiceImpl<HotelMapper, Hotel> implements IHo
             String json = hit.getSourceAsString();
             // 反序列化
             HotelDoc hotelDoc = JSON.parseObject(json, HotelDoc.class);
+            // 获取排序值，是个数组：因为可能以后不止一个排序条件
+            Object[] sortValues = hit.getSortValues();
+            if (sortValues.length > 0) hotelDoc.setDistance(sortValues[0]);
             // 放入集合
             hotels.add(hotelDoc);
         }

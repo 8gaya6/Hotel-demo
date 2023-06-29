@@ -17,7 +17,8 @@ public class HotelDoc {
     private String business;
     private String location;
     private String pic;
-
+    // 周边酒店的距离值
+    private Object distance;
     public HotelDoc(Hotel hotel) {
         this.id = hotel.getId();
         this.name = hotel.getName();
