@@ -3,6 +3,11 @@ package cn.itcast.hotel.pojo;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
 @Data
 @NoArgsConstructor
 public class HotelDoc {
@@ -21,6 +26,9 @@ public class HotelDoc {
     private Object distance;
     // 是否打钱了
     private Boolean isAD;
+    // 用于搜索自动补全的
+    private List<String> suggestion;
+
     public HotelDoc(Hotel hotel) {
         this.id = hotel.getId();
         this.name = hotel.getName();
@@ -33,5 +41,13 @@ public class HotelDoc {
         this.business = hotel.getBusiness();
         this.location = hotel.getLatitude() + ", " + hotel.getLongitude();
         this.pic = hotel.getPic();
+
+        // 如果 business 有多个值，需要切割
+        if  (this.business.contains("/")) {
+            String[] arr = this.business.split("/");
+            this.suggestion = new ArrayList<>();
+            this.suggestion.add(this.brand);
+            Collections.addAll(this.suggestion, arr);
+        } else this.suggestion = Arrays.asList(this.brand, this.business);
     }
 }
